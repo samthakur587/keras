@@ -1021,9 +1021,18 @@ def log2(x):
 
 
 def logaddexp(x1, x2):
-    raise NotImplementedError(
-        "`logaddexp` is not supported with openvino backend"
-    )
+    x1 = get_ov_output(x1)
+    x2 = get_ov_output(x2)
+
+    x1, x2 = _align_operand_types(x1, x2, "logaddexp()")
+    
+    max_val = ov_opset.maximum(x1, x2).output(0)
+    abs_diff = ov_opset.abs(ov_opset.subtract(x1, x2).output(0)).output(0)
+    neg_abs_diff = ov_opset.negative(abs_diff).output(0)
+    exp_neg_abs = ov_opset.exp(neg_abs_diff).output(0)
+    log1p_exp = ov_opset.log1p(exp_neg_abs).output(0)
+    result = ov_opset.add(max_val, log1p_exp).output(0)
+    return OpenVINOKerasTensor(result)
 
 
 def logical_and(x1, x2):
